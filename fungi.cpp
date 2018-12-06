@@ -341,5 +341,7 @@ int main(int argv, char* argc[]) {
 	win.doFungus();
     }
 
+    delete p;
+
     return 0;
 }
