@@ -82,8 +82,6 @@ public:
        color.green = c.green;
        color.blue = c.blue;
        color.alpha = c.alpha;
-       std::cout << "L: " << local.posx << " " << local.posy;
-       std::cout << "C: " << color.red << " " << color.green << " " << color.blue << std::endl;
    }
 
    ~Fungus() {}
@@ -102,6 +100,106 @@ public:
 };
 
 /*
+ * Petri
+ * Where the fungus live, grow, and die
+ */
+class Petri {
+private:
+    std::vector<Fungus*> dish;
+
+public:
+    Petri() {}
+
+    /**
+     * @param maxSize Maximum number of fungi that we will have
+     */
+    Petri(int maxSize) {
+	dish.reserve(maxSize);
+	for(int i = 0; i < maxSize; i++) {
+	    dish.push_back(nullptr);
+	}
+    }
+
+    /**
+     * Copy construction
+     * Doesn't work right apparently
+     */
+    Petri(const Petri& p) {
+	dish.reserve(p.getSize());
+	for(int i = 0; i < p.getSize(); i++) {
+	    dish.push_back(nullptr);
+	}
+	for(int i = 0; i < dish.size(); i++) {
+	    Fungus* temp = p.getFungus(i);
+	    if(temp != nullptr) {
+		addFungus(new Fungus(temp->getLocation(), temp->getColor()));
+	    }
+	}
+    }
+
+    ~Petri() {
+	for(int i = 0; i < dish.size(); i++) {
+	    if(dish[i] != nullptr) {
+		Fungus* temp = dish[i];
+		dish[i] = nullptr;
+		delete temp;
+	    }
+	}
+    }
+
+    /**
+     * Gets a Fungus from the dish
+     * @param i The position of the fungus from the dish we want
+     */
+    Fungus* operator[](const int& i) {
+	if(i >= dish.size()) {
+	    return nullptr;
+	} else {
+	    return dish[i];
+	}
+    }
+
+    Fungus* getFungus(const int& i) const {
+	if(i >= dish.size()) {
+	    return nullptr;
+	} else {
+	    return dish[i];
+	}
+    }
+
+    /**
+     * Adds a fungus to the dish, unless the dish is full
+     * @param f The fungus to add
+     */
+    void addFungus(Fungus* f) {
+	for(int i = 0; i < dish.size(); i++) {
+	    if(dish[i] == nullptr) {
+		dish[i] = f;
+		break;
+	    }
+	}
+    }
+
+    /**
+     * Simulates one round of fungus life
+     *
+     */
+    void grow() {}
+
+    /**
+     * Get size of dish
+     * @return Max number of fungus we can hold in dish
+     */
+    int getSize() const { return dish.size(); }
+    
+    /**
+     * Gives the fungus
+     * @return The vector of fungus
+     */
+    std::vector<Fungus*> & getDish() { return dish; }
+};
+
+/*
  * SDLWindow
  * The display into our fungus world
  */
@@ -109,7 +207,7 @@ class SDLWindow {
 private:
     SDL_Window* sdlWindow;
     SDL_Renderer* sdlRenderer;
-    
+    Petri petri;
     bool bad;
 
     /**
@@ -171,6 +269,12 @@ public:
 	init({100, 100}, {SCREEN_WIDTH, SCREEN_HEIGHT});
     }
 
+    SDLWindow(const Petri& p) {
+	petri = p;
+	bad = false;
+	init({100, 100}, {SCREEN_WIDTH, SCREEN_HEIGHT});
+    }
+
     ~SDLWindow() {
 	if(sdlWindow != nullptr) {
 	    SDL_DestroyWindow(sdlWindow);
@@ -181,7 +285,7 @@ public:
 	SDL_Quit();
     }
 
-    void doFungus(const std::vector<std::vector<Fungus*> >& dish) {
+    void doFungus() {
 
 	SDL_Event event;
 	bool end = false;
@@ -191,12 +295,20 @@ public:
 		    end = true;
 		}
 	    }
-	    for(int i = 0; i < dish.size(); i++) {
-		for(int j = 0; j < dish[i].size(); j++)
-		    if(dish[i][j] != nullptr) {
-			drawFungus(*dish[i][j]);
-		    }
+
+	    for(int i = 0; i < petri.getSize(); i++) {
+		if(petri[i] != nullptr) {
+		    drawFungus(*petri[i]);
+		}
 	    }
+	    /*
+	    std::vector<Fungus*> dish = petri.getDish();
+	    for(int i = 0; i < dish.size(); i++) {
+		if(dish[i] != nullptr) {
+		    drawFungus(*dish[i]);
+		}
+	    }
+	    */
 	    SDL_RenderPresent(sdlRenderer);
 	
 	}
@@ -217,28 +329,16 @@ int main(int argv, char* argc[]) {
     
     srandom(11);
 
-    std::vector<std::vector<Fungus*> > dish;
-    for(int i = 0; i < SCREEN_HEIGHT; i++) {
-	std::vector<Fungus*> temp;
-	temp.push_back(new Fungus({0, i}, {i,255 - i,255,255}));
-	for(int j = 1; j < SCREEN_WIDTH; j++) {
-	    temp.push_back(nullptr);
-	}
-	dish.push_back(temp);
+    Petri* p = new Petri(SCREEN_HEIGHT * SCREEN_WIDTH);
+
+    for(int i = 0; i < 1; i++) {
+	p->addFungus(new Fungus({0, i}, {i,255 - i,255,255}));
     }
 
     
-    SDLWindow win;
+    SDLWindow win(*p);
     if(!win.isBad()) {
-	win.doFungus(dish);
-    }
-
-    for(int i = 0; i < dish.size(); i++) {
-	for(int j = 0; j < dish[i].size(); j++) {
-	    if(dish[i][j] != nullptr) {
-		delete dish[i][j];
-	    }
-	}
+	win.doFungus();
     }
 
     return 0;
