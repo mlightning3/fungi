@@ -58,6 +58,7 @@ struct Color {
     uint8_t red;
     uint8_t green;
     uint8_t blue;
+    uint8_t alpha;
 };
 
 /*
@@ -74,14 +75,29 @@ private:
 public:
    Fungus() {}
 
+   Fungus(const Location& l, const Color& c) {
+       local.posx = l.posx;
+       local.posy = l.posy;
+       color.red = c.red;
+       color.green = c.green;
+       color.blue = c.blue;
+       color.alpha = c.alpha;
+       std::cout << "L: " << local.posx << " " << local.posy;
+       std::cout << "C: " << color.red << " " << color.green << " " << color.blue << std::endl;
+   }
+
    ~Fungus() {}
+
+   Location getLocation() const { return local; }
+
+   Color getColor() const { return color; }
 };
 
 /*
- * Window
+ * SDLWindow
  * The display into our fungus world
  */
-class Window {
+class SDLWindow {
 private:
     SDL_Window* sdlWindow;
     SDL_Renderer* sdlRenderer;
@@ -107,14 +123,15 @@ private:
 	    bad = true;
 	}
 	sdlWindow = SDL_CreateWindow("Fungi", winpos.posx, winpos.posy,
-		                     winsize.width, winsize.height, true);
+		                     winsize.width, winsize.height,
+				     SDL_WINDOW_OPENGL);
 	if (sdlWindow == nullptr){
 	    logSDLError(std::cout, "CreateWindow");
 	    SDL_Quit();
 	    bad = true;
 	}
 	sdlRenderer = SDL_CreateRenderer(sdlWindow, -1,
-	SDL_RENDERER_SOFTWARE | SDL_RENDERER_PRESENTVSYNC);
+	SDL_RENDERER_SOFTWARE);
 	if (sdlRenderer == nullptr){
 	    logSDLError(std::cout, "CreateRenderer");
 	    SDL_DestroyWindow(sdlWindow);
@@ -122,15 +139,30 @@ private:
 	    SDL_Quit();
 	    bad = true;
 	}
+	SDL_SetRenderDrawColor(sdlRenderer, 0, 0, 0, 255);
+	SDL_RenderClear(sdlRenderer);
+	SDL_RenderPresent(sdlRenderer);
+    }
+
+    /**
+     * Draws a fungus on the screen
+     *
+     */
+    void drawFungus(const Fungus& f) {
+	Color color = f.getColor();
+	Location loc = f.getLocation();
+	SDL_SetRenderDrawColor(sdlRenderer, color.red, color.green, color.blue,
+		               color.alpha);
+	SDL_RenderDrawPoint(sdlRenderer, loc.posx, loc.posy);
     }
 
 public:
-    Window() {
+    SDLWindow() {
 	bad = false;
 	init({100, 100}, {SCREEN_WIDTH, SCREEN_HEIGHT});
     }
 
-    ~Window() {
+    ~SDLWindow() {
 	if(sdlWindow != nullptr) {
 	    SDL_DestroyWindow(sdlWindow);
 	}
@@ -140,16 +172,23 @@ public:
 	SDL_Quit();
     }
 
-    void do_fugus() {
+    void doFungus(const std::vector<std::vector<Fungus*> >& dish) {
 
 	SDL_Event event;
 	bool end = false;
 	while(!end) {
-	    while(SDL_PollEvent(&e)) {
-		if(e.type == SDL_QUIT) {
+	    while(SDL_PollEvent(&event)) {
+		if(event.type == SDL_QUIT) {
 		    end = true;
 		}
 	    }
+	    for(int i = 0; i < dish.size(); i++) {
+		for(int j = 0; j < dish[i].size(); j++)
+		    if(dish[i][j] != nullptr) {
+			drawFungus(*dish[i][j]);
+		    }
+	    }
+	    SDL_RenderPresent(sdlRenderer);
 	
 	}
     
@@ -169,6 +208,29 @@ int main(int argv, char* argc[]) {
     
     srandom(11);
 
+    std::vector<std::vector<Fungus*> > dish;
+    for(int i = 0; i < SCREEN_HEIGHT; i++) {
+	std::vector<Fungus*> temp;
+	temp.push_back(new Fungus({0, i}, {i,255 - i,255,255}));
+	for(int j = 1; j < SCREEN_WIDTH; j++) {
+	    temp.push_back(nullptr);
+	}
+	dish.push_back(temp);
+    }
+
+    
+    SDLWindow win;
+    if(!win.isBad()) {
+	win.doFungus(dish);
+    }
+
+    for(int i = 0; i < dish.size(); i++) {
+	for(int j = 0; j < dish[i].size(); j++) {
+	    if(dish[i][j] != nullptr) {
+		delete dish[i][j];
+	    }
+	}
+    }
 
     return 0;
 }
