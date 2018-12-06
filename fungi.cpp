@@ -88,8 +88,16 @@ public:
 
    ~Fungus() {}
 
+   /**
+    * Get the location of the fungus
+    * @return The location of the fungus
+    */
    Location getLocation() const { return local; }
 
+   /**
+    * Get the color of the fungus
+    * @return The color of the fungus
+    */
    Color getColor() const { return color; }
 };
 
@@ -115,7 +123,8 @@ private:
 
     /**
      * Brings up all the SDL objects we will need to draw our window
-     *
+     * @param winpos The position we want for the window
+     * @param winsize The size we want for the window
      */
     void init(const Window_Pos& winpos, const Window_Size& winsize) {
 	if (SDL_Init(SDL_INIT_EVERYTHING) != 0){
@@ -146,7 +155,7 @@ private:
 
     /**
      * Draws a fungus on the screen
-     *
+     * @param f The fungus we want to draw
      */
     void drawFungus(const Fungus& f) {
 	Color color = f.getColor();
