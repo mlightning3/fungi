@@ -82,6 +82,8 @@ public:
        color.green = c.green;
        color.blue = c.blue;
        color.alpha = c.alpha;
+       hp = 10;
+       growthPoints = 0;
    }
 
    ~Fungus() {}
@@ -97,6 +99,12 @@ public:
     * @return The color of the fungus
     */
    Color getColor() const { return color; }
+
+   void addGrowth(uint8_t val) { growthPoints += val; }
+   
+   uint8_t getGrowthPoints() const { return growthPoints; }
+
+   uint8_t getHP() const { return hp; }
 };
 
 /*
@@ -105,7 +113,33 @@ public:
  */
 class Petri {
 private:
-    std::vector<Fungus*> dish;
+    std::vector<Fungus*> population; // Holds only the living fungus
+    std::vector< std::vector<Fungus*> > dish; // Keeps track of each position
+					      // a fungus may live
+
+    /**
+     * Grows a fungus
+     * @param f The fungus to grow
+     * @return Either a new fungus or nullptr if no children spawn
+     */
+    Fungus* growFungus(Fungus& f) {
+	uint8_t val = random();
+	while(val > 100) {
+	    val = random();
+	}
+	if(val < GROWTH_RATE) {
+	    f.addGrowth(1);
+	}
+	Fungus* child = nullptr;
+	if(f.getGrowthPoints() >= 10) {
+	    f.addGrowth(255 - f.getGrowthPoints());
+	    Location home = f.getLocation();
+	    home.posx += 1;
+	    home.posy += 1;
+	    child = new Fungus(home, f.getColor());
+	}
+	return child;
+    }
 
 public:
     Petri() {}
@@ -113,17 +147,27 @@ public:
     /**
      * @param maxSize Maximum number of fungi that we will have
      */
-    Petri(int maxSize) {
-	dish.reserve(maxSize);
+    Petri(int maxSize, int dimx, int dimy) {
+	population.reserve(maxSize);
 	for(int i = 0; i < maxSize; i++) {
-	    dish.push_back(nullptr);
+	    population.push_back(nullptr);
 	}
+	dish.reserve(dimy);
+	std::vector<Fungus*> temp(dimx);
+	for(int i = 0; i < dimx; i++) {
+	    temp.push_back(nullptr);
+	}
+	for(int i = 0; i < dimy; i++) {
+	    dish.push_back(temp);
+	}
+	
     }
 
     /**
      * Copy construction
      * Doesn't work right apparently
      */
+    /*
     Petri(const Petri& p) {
 	dish.reserve(p.getSize());
 	for(int i = 0; i < p.getSize(); i++) {
@@ -136,12 +180,13 @@ public:
 	    }
 	}
     }
+    */
 
     ~Petri() {
-	for(int i = 0; i < dish.size(); i++) {
-	    if(dish[i] != nullptr) {
-		Fungus* temp = dish[i];
-		dish[i] = nullptr;
+	for(int i = 0; i < population.size(); i++) {
+	    if(population[i] != nullptr) {
+		Fungus* temp = population[i];
+		population[i] = nullptr;
 		delete temp;
 	    }
 	}
@@ -155,15 +200,15 @@ public:
 	if(i >= dish.size()) {
 	    return nullptr;
 	} else {
-	    return dish[i];
+	    return population[i];
 	}
     }
 
     Fungus* getFungus(const int& i) const {
-	if(i >= dish.size()) {
+	if(i >= population.size()) {
 	    return nullptr;
 	} else {
-	    return dish[i];
+	    return population[i];
 	}
     }
 
@@ -172,10 +217,13 @@ public:
      * @param f The fungus to add
      */
     void addFungus(Fungus* f) {
-	for(int i = 0; i < dish.size(); i++) {
-	    if(dish[i] == nullptr) {
-		dish[i] = f;
-		break;
+	if(dish[f->getLocation().posy][f->getLocation().posx] == nullptr) {
+	    dish[f->getLocation().posy][f->getLocation().posx] = f;
+	    for(int i = 0; i < population.size(); i++) {
+		if(population[i] == nullptr) {
+		    population[i] = f;
+		    break;
+		}
 	    }
 	}
     }
@@ -184,7 +232,17 @@ public:
      * Simulates one round of fungus life
      *
      */
-    void grow() {}
+    void grow() {
+	for(int i = 0; i < dish.size(); i++) {
+	    if(dish[i] != nullptr) {
+		Fungus* newFungus = growFungus(*dish[i]);
+		if(newFungus != nullptr) {
+		    addFungus(newFungus);
+		}
+	    }
+	}
+    
+    }
 
     /**
      * Get size of dish
@@ -310,7 +368,10 @@ public:
 	    }
 	    */
 	    SDL_RenderPresent(sdlRenderer);
-	
+
+	    petri.grow();
+	    
+	    SDL_Delay(100);
 	}
     
     }
@@ -331,17 +392,24 @@ int main(int argv, char* argc[]) {
 
     Petri* p = new Petri(SCREEN_HEIGHT * SCREEN_WIDTH);
 
-    for(int i = 0; i < 1; i++) {
-	p->addFungus(new Fungus({0, i}, {i,255 - i,255,255}));
-    }
+    p->addFungus(new Fungus({0, 0}, {255, 0, 0, 0}));
+    p->addFungus(new Fungus({0, 1}, {0, 255, 0, 0}));
+    p->addFungus(new Fungus({0, 2}, {0, 0, 255, 0}));
 
+    /*
+    for(int i = 0; i < 255; i++) {
+	for(int j = 0; j < 255; j++) {
+	    p->addFungus(new Fungus({j, i}, {i, 255 - i, j, 255 - j}));
+	}
+    }
+    */
     
     SDLWindow win(*p);
     if(!win.isBad()) {
 	win.doFungus();
     }
 
-    delete p;
+    //delete p;
 
     return 0;
 }
