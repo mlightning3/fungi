@@ -17,6 +17,7 @@
 /** Important Constants **/
 
 const uint8_t GROWTH_RATE = 4; /* A percent out of 100 */
+const uint8_t TICKS = 10; /*Time to wait between growths */
 
 const int SCREEN_WIDTH  = 640;
 const int SCREEN_HEIGHT = 480;
@@ -113,6 +114,7 @@ public:
  */
 class Petri {
 private:
+    uint32_t maxSize;
     std::vector<Fungus*> population; // Holds only the living fungus
     std::vector< std::vector<Fungus*> > dish; // Keeps track of each position
 					      // a fungus may live
@@ -146,18 +148,20 @@ public:
 
     /**
      * @param maxSize Maximum number of fungi that we will have
+     * @param ws The size of the window the petri dish should fill 
      */
-    Petri(int maxSize, int dimx, int dimy) {
+    Petri(int maxSize, const Window_Size& ws) {
+	this->maxSize = maxSize;
 	population.reserve(maxSize);
 	for(int i = 0; i < maxSize; i++) {
 	    population.push_back(nullptr);
 	}
-	dish.reserve(dimy);
-	std::vector<Fungus*> temp(dimx);
-	for(int i = 0; i < dimx; i++) {
+	dish.reserve(ws.width);
+	std::vector<Fungus*> temp(ws.height);
+	for(int i = 0; i < ws.height; i++) {
 	    temp.push_back(nullptr);
 	}
-	for(int i = 0; i < dimy; i++) {
+	for(int i = 0; i < ws.width; i++) {
 	    dish.push_back(temp);
 	}
 	
@@ -197,7 +201,7 @@ public:
      * @param i The position of the fungus from the dish we want
      */
     Fungus* operator[](const int& i) {
-	if(i >= dish.size()) {
+	if(i >= population.size()) {
 	    return nullptr;
 	} else {
 	    return population[i];
@@ -213,7 +217,7 @@ public:
     }
 
     /**
-     * Adds a fungus to the dish, unless the dish is full
+     * Adds a fungus to the dish, unless that spot is full
      * @param f The fungus to add
      */
     void addFungus(Fungus* f) {
@@ -225,6 +229,8 @@ public:
 		    break;
 		}
 	    }
+	} else {
+	    delete f;
 	}
     }
 
@@ -234,10 +240,12 @@ public:
      */
     void grow() {
 	for(int i = 0; i < dish.size(); i++) {
-	    if(dish[i] != nullptr) {
-		Fungus* newFungus = growFungus(*dish[i]);
-		if(newFungus != nullptr) {
-		    addFungus(newFungus);
+	    for(int j = 0; j < dish[i].size(); j++) {
+		if(dish[i][j] != nullptr) {
+		    Fungus* newFungus = growFungus(*dish[i][j]);
+		    if(newFungus != nullptr) {
+			addFungus(newFungus);
+		    }
 		}
 	    }
 	}
@@ -248,13 +256,19 @@ public:
      * Get size of dish
      * @return Max number of fungus we can hold in dish
      */
-    int getSize() const { return dish.size(); }
+    uint32_t getSize() const { return maxSize; }
     
     /**
      * Gives the fungus
-     * @return The vector of fungus
+     * @return The 2D vector of fungus
      */
-    std::vector<Fungus*> & getDish() { return dish; }
+    std::vector<std::vector<Fungus*> > & getDish() { return dish; }
+
+    /**
+     * Get list of living fungus
+     * @return Vector of fungus in the dish
+     */
+    std::vector< Fungus* > & getPopulation() { return population; }
 };
 
 /*
@@ -371,7 +385,7 @@ public:
 
 	    petri.grow();
 	    
-	    SDL_Delay(100);
+	    SDL_Delay(TICKS);
 	}
     
     }
@@ -390,7 +404,8 @@ int main(int argv, char* argc[]) {
     
     srandom(11);
 
-    Petri* p = new Petri(SCREEN_HEIGHT * SCREEN_WIDTH);
+    Window_Size ws = {SCREEN_WIDTH, SCREEN_HEIGHT};
+    Petri* p = new Petri(SCREEN_HEIGHT * SCREEN_WIDTH, ws);
 
     p->addFungus(new Fungus({0, 0}, {255, 0, 0, 0}));
     p->addFungus(new Fungus({0, 1}, {0, 255, 0, 0}));
