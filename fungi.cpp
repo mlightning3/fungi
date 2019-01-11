@@ -74,8 +74,19 @@ private:
    uint8_t hp;
 
 public:
-   Fungus() {}
+   /**
+    * Creates a useless Fungus
+    */
+   Fungus() {
+       hp = 0;
+       growthPoints = 0;
+   }
 
+   /**
+    * Creates a Fungus
+    * @param l The location the fungus should live in
+    * @param c The color the fungus should be
+    */
    Fungus(const Location& l, const Color& c) {
        local.posx = l.posx;
        local.posy = l.posy;
@@ -144,13 +155,21 @@ private:
     }
 
 public:
-    Petri() {}
+    /**
+     * Creates a useless Petri dish
+     */
+    Petri() {
+	maxSize = 0;
+	//population = nullptr;
+	//dish = nullptr;
+    }
 
     /**
+     * Creates a Petri dish for the fungus to live in
      * @param maxSize Maximum number of fungi that we will have
      * @param ws The size of the window the petri dish should fill 
      */
-    Petri(int maxSize, const Window_Size& ws) {
+    Petri(uint32_t maxSize, const Window_Size& ws) {
 	this->maxSize = maxSize;
 	population.reserve(maxSize);
 	for(int i = 0; i < maxSize; i++) {
@@ -186,6 +205,9 @@ public:
     }
     */
 
+    /**
+     * Destroyer of dishes
+     */
     ~Petri() {
 	for(int i = 0; i < population.size(); i++) {
 	    if(population[i] != nullptr) {
@@ -200,15 +222,15 @@ public:
      * Gets a Fungus from the dish
      * @param i The position of the fungus from the dish we want
      */
-    Fungus* operator[](const int& i) {
-	if(i >= population.size()) {
-	    return nullptr;
-	} else {
-	    return population[i];
-	}
+    Fungus* operator[](const uint32_t& i) {
+	return getFungus(i);
     }
-
-    Fungus* getFungus(const int& i) const {
+    
+    /**
+     * Gets a Fungus from the dish
+     * @param i The position of the fungus from the dish we want
+     */
+    Fungus* getFungus(const uint32_t& i) const {
 	if(i >= population.size()) {
 	    return nullptr;
 	} else {
@@ -217,7 +239,8 @@ public:
     }
 
     /**
-     * Adds a fungus to the dish, unless that spot is full
+     * Adds a fungus to the dish, unless that spot is full, then the fungus is
+     * deleted from existence.
      * @param f The fungus to add
      */
     void addFungus(Fungus* f) {
@@ -336,17 +359,27 @@ private:
     }
 
 public:
+    /**
+     * Creates a SDLWindow without anything to show
+     */
     SDLWindow() {
 	bad = false;
 	init({100, 100}, {SCREEN_WIDTH, SCREEN_HEIGHT});
     }
 
+    /**
+     * Creates a SDLWindow with an attached Petri dish
+     * @param p A petri dish
+     */
     SDLWindow(const Petri& p) {
 	petri = p;
 	bad = false;
 	init({100, 100}, {SCREEN_WIDTH, SCREEN_HEIGHT});
     }
 
+    /**
+     * Destroyer of the window
+     */
     ~SDLWindow() {
 	if(sdlWindow != nullptr) {
 	    SDL_DestroyWindow(sdlWindow);
@@ -357,6 +390,9 @@ public:
 	SDL_Quit();
     }
 
+    /**
+     * Runs the growth of the fungus till the end of time
+     */
     void doFungus() {
 
 	SDL_Event event;
@@ -373,14 +409,7 @@ public:
 		    drawFungus(*petri[i]);
 		}
 	    }
-	    /*
-	    std::vector<Fungus*> dish = petri.getDish();
-	    for(int i = 0; i < dish.size(); i++) {
-		if(dish[i] != nullptr) {
-		    drawFungus(*dish[i]);
-		}
-	    }
-	    */
+
 	    SDL_RenderPresent(sdlRenderer);
 
 	    petri.grow();
