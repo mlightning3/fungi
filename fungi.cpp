@@ -112,10 +112,22 @@ public:
     */
    Color getColor() const { return color; }
 
+   /**
+    * Adds growth to the fungus
+    * @param val Amount to grow the fungus
+    */
    void addGrowth(uint8_t val) { growthPoints += val; }
    
+   /**
+    * Gets the current growth of the fungus
+    * @return Current growth points of fungus
+    */
    uint8_t getGrowthPoints() const { return growthPoints; }
 
+   /**
+    * Gets the current health of the fungus
+    * @return Current health points of the fungus
+    */
    uint8_t getHP() const { return hp; }
 };
 
@@ -291,7 +303,7 @@ public:
      * Get list of living fungus
      * @return Vector of fungus in the dish
      */
-    std::vector< Fungus* > & getPopulation() { return population; }
+    std::vector<Fungus*> & getPopulation() { return population; }
 };
 
 /*
